@@ -2,14 +2,14 @@
  * API sub-router for user collection endpoints.
  */
 
-const { Router, urlencoded } = require('express')
+const { Router } = require('express')
 const { validateAgainstSchema } = require('../lib/validation')
 const { UserRegisterSchema, UserLoginSchema, insertNewUser, getUserbyId, validateCredentials } = require('../models/user')
-const jwt = require('jsonwebtoken')
 const { secretKey, generateAuthToken, getTokenFromHeader, requireAuthentication } = require('../lib/auth')
 const { getDb } = require('../lib/mongo')
 
 const router = Router()
+const jwt = require('jsonwebtoken')
 
 /**
  * POST /users - Route to create new users
@@ -22,51 +22,29 @@ router.post('/', async function (req, res, next) {
             error: "Request body is not a valid user object."
         })
     }
-    
-    try {
-        let id = null
-        
-        if (req.body.role === "admin" || req.body.role === "instructor") {
-            const token = getTokenFromHeader(req)
 
-            // Check auth token
-            if (!token) {
-                return res.status(403).send({
-                    error: "Authentication token required to create this role."
-                })
-            }
-
-            // Authenticate user to create admin/instructor role
-            try {
-                const payload = jwt.verify(token, secretKey)
-                req.user = payload.sub
-
-                const user = await getUserbyId(req.user, true)
-                if (user.role === "admin") {
-                    id = await insertNewUser(req.body)
-                } else {
-                    return res.status(403).send({
-                        error: "Invalid authorization for registering this role."
-                    })
-                }
-            } catch (error) {
-                return res.status(403).send({
-                    error: "Invalid authentication credentials."
-                })
-            }
-        } else {
-            id = await insertNewUser(req.body)
+    if (req.body.role === "student") {
+        try {
+            const id = await insertNewUser(req.body)
+            respondUserCreation(res, id)
+        } catch (error) {
+            next(error)
         }
-
-        if (id) {
-            res.status(201).send( { _id: id })
-        } else {
-            res.status(409).send({
-                error: "Email address already exists!"
-            })
-        }
-    } catch (error) {
-        next(error)
+    } else {
+        next()
+    }
+}, requireAuthentication, async function(req, res, next) {
+    if (req.role === "admin") {
+        try {
+            const id = await insertNewUser(req.body)
+            respondUserCreation(res, id)
+        } catch (error) {
+            next(error)
+        } 
+    } else {
+        res.status(403).send({
+            error: "Invalid authorization for registering this role."
+        })
     }
 })
 
@@ -117,11 +95,9 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
 
     try {
         const user = await getUserbyId(req.params.userId)
-        // TODO: Join student and instrcutor roles with courses
+        // TODO: Join student and instructor roles with courses
         if (user) {
-            res.status(200).send({
-                ...user
-            })
+            res.status(200).send(user)
         } else {
             next()
         }
@@ -129,5 +105,18 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
         next(error)
     }
 })
+
+/**
+ * Helper function to send a reponse for user creation.
+ */
+function respondUserCreation(res, id) {
+    if (id) {
+        res.status(201).send({ _id: id })
+    } else {
+        res.status(409).send({
+            error: "Email address already exists!"
+        })
+    }
+}
 
 module.exports = router

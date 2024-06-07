@@ -72,7 +72,7 @@ exports.getUserbyId = getUserbyId
 
 /*
  * Executes a DB query to compare the credentials from the client and the database.  Returns
- * a Promise that resolves to a Boolean to indicate valid credentials or not.
+ * a Promise that resolves to a Boolean to indicate the credentials are valid or not.
  */
 async function validateCredentials(email, password) {
     const db = getDb()
