@@ -3,8 +3,8 @@
  */
 
 const { ObjectId } = require('mongodb')
-const { extractValidFields } = require('../lib/validation')
 const { getDb } = require('../lib/mongo')
+
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
 
