@@ -6,7 +6,7 @@ const { Router, urlencoded } = require('express')
 const { validateAgainstSchema } = require('../lib/validation')
 const { UserRegisterSchema, UserLoginSchema, insertNewUser, getUserbyId, validateCredentials } = require('../models/user')
 const jwt = require('jsonwebtoken')
-const { secretKey, generateAuthToken, getTokenFromHeader } = require('../lib/auth')
+const { secretKey, generateAuthToken, getTokenFromHeader, requireAuthentication } = require('../lib/auth')
 const { getDb } = require('../lib/mongo')
 
 const router = Router()
@@ -16,7 +16,7 @@ const router = Router()
  */
 router.post('/', async function (req, res, next) {
 
-    // Validate request fields
+    // Validate request body fields
     if (!validateAgainstSchema(req.body, UserRegisterSchema)) {
         return res.status(400).send({
             error: "Request body is not a valid user object."
@@ -36,6 +36,7 @@ router.post('/', async function (req, res, next) {
                 })
             }
 
+            // Authenticate user to create admin/instructor role
             try {
                 const payload = jwt.verify(token, secretKey)
                 req.user = payload.sub
@@ -48,10 +49,9 @@ router.post('/', async function (req, res, next) {
                         error: "Invalid authorization for registering this role."
                     })
                 }
-
             } catch (error) {
                 return res.status(403).send({
-                    error: "Invalid authentication token."
+                    error: "Invalid authentication credentials."
                 })
             }
         } else {
@@ -74,41 +74,60 @@ router.post('/', async function (req, res, next) {
  * POST /users/login - Route to login existing users
  */
 router.post('/login', async function (req, res, next) {
-    if (validateAgainstSchema(req.body, UserLoginSchema)) {
-        try {
-            const authenticated = await validateCredentials(req.body.email, req.body.password)
-            const db = getDb()
-            const collection = db.collection('users')
 
-            if (authenticated) {
-                const result = await collection.find({ email: req.body.email }).toArray()
-                const id = result[0]._id.toString()
-                const token = generateAuthToken(id)
-
-                res.status(200).send({
-                    token: token
-                })
-            } else {
-                res.status(401).send({
-                    error: "Invalid authentication aredentials!"
-                })
-            }
-        } catch (error) {
-            next(error)
-        }
-    } else {
-        res.status(400).send({
+    // Validate request body fields
+    if (!validateAgainstSchema(req.body, UserLoginSchema)) {
+        return res.status(400).send({
             error: "Request body has invalid fields for logging in!"
         })
     }
+    
+    try {
+        const authenticated = await validateCredentials(req.body.email, req.body.password)
+        const db = getDb()
+        const collection = db.collection('users')
 
+        if (authenticated) {
+            const result = await collection.find({ email: req.body.email }).toArray()
+            const id = result[0]._id.toString()
+            const token = generateAuthToken(id)
+
+            res.status(200).send({
+                token: token
+            })
+        } else {
+            res.status(401).send({
+                error: "Invalid authentication credentials!"
+            })
+        }
+    } catch (error) {
+        next(error)
+    }
 })
 
 /**
  * GET /users/{id} - Route to fetch a specific user's information
  */
-router.get('/:userId', function (req, res, next) {
+router.get('/:userId', requireAuthentication, async function (req, res, next) {
+    if (req.user !== req.params.userId) {
+        return res.status(403).send({
+            error: "Access to this resource is forbidden."
+        })
+    }
 
+    try {
+        const user = await getUserbyId(req.params.userId)
+        // TODO: Join student and instrcutor roles with courses
+        if (user) {
+            res.status(200).send({
+                ...user
+            })
+        } else {
+            next()
+        }
+    } catch (error) {
+        next(error)
+    }
 })
 
 module.exports = router
