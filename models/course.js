@@ -4,7 +4,6 @@
 
 const { ObjectId } = require("mongodb")
 const { getDb } = require("../lib/mongo")
-const { extractValidFields } = require("../lib/validation");
 const joi = require("joi");
 
 /**
@@ -17,7 +16,6 @@ const CourseSchema = joi.object({
     term: joi.string(),
     instructorId: joi.string().length(24).hex()
 });
-exports.CourseSchema = CourseSchema
 
 /**
  * Middleware to validate the request body against course schema

@@ -3,26 +3,16 @@
  */
 
 const { Router } = require('express')
-const { validateAgainstSchema } = require('../lib/validation')
-const { UserRegisterSchema, UserLoginSchema, insertNewUser, getUserbyId, validateCredentials } = require('../models/user')
-const { secretKey, generateAuthToken, getTokenFromHeader, requireAuthentication } = require('../lib/auth')
+const { insertNewUser, getUserbyId, validateCredentials, validateUser } = require('../models/user')
+const { generateAuthToken, requireAuthentication } = require('../lib/auth')
 const { getDb } = require('../lib/mongo')
 
 const router = Router()
-const jwt = require('jsonwebtoken')
 
 /**
  * POST /users - Route to create new users
  */
-router.post('/', async function (req, res, next) {
-
-    // Validate request body fields
-    if (!validateAgainstSchema(req.body, UserRegisterSchema)) {
-        return res.status(400).send({
-            error: "Request body is not a valid user object."
-        })
-    }
-
+router.post('/', validateUser, async function (req, res, next) {
     if (req.body.role === "student") {
         try {
             const id = await insertNewUser(req.body)
@@ -51,15 +41,7 @@ router.post('/', async function (req, res, next) {
 /**
  * POST /users/login - Route to login existing users
  */
-router.post('/login', async function (req, res, next) {
-
-    // Validate request body fields
-    if (!validateAgainstSchema(req.body, UserLoginSchema)) {
-        return res.status(400).send({
-            error: "Request body has invalid fields for logging in!"
-        })
-    }
-    
+router.post('/login', validateUser, async function (req, res, next) {
     try {
         const authenticated = await validateCredentials(req.body.email, req.body.password)
         const db = getDb()

@@ -1,37 +1,43 @@
 /**
  * User schema and data accessor methods
  */
+
 const { ObjectId } = require('mongodb')
 const { extractValidFields } = require('../lib/validation')
 const { getDb } = require('../lib/mongo')
 const bcrypt = require('bcryptjs')
+const joi = require('joi')
 
 /**
  * Schema describing required/optional fields to register a new user
  */
-const UserRegisterSchema = {
-    name: { required: true },
-    email: { required: true },
-    password: { required: true},
-    role: { required: true }
-}
-exports.UserRegisterSchema = UserRegisterSchema
+const UserSchema = joi.object({
+    name: joi.string(),
+    email: joi.string(),
+    password: joi.string(),
+    role: joi.string()
+})
 
 /**
- * Schema describing required/optional fields to log in an existing user
- */
-const UserLoginSchema = {
-    email: { required: true },
-    password: { required: true}
+ * Middleware to validate the request body against user schema
+ */ 
+function validateUser(req, res, next) {
+    const result = UserSchema.validate(req.body, { allowUnknown: false, presence: 'optional' });
+    if (result.error) {
+        res.status(400).send({
+            error: "Request body is not a valid user object."
+        });
+    } else {
+        next();
+    }
 }
-exports.UserLoginSchema = UserLoginSchema
+exports.validateUser = validateUser
 
 /*
  * Executes a DB query to insert a new business into the database.  Returns
  * a Promise that resolves to the ID of the newly-created business entry.
  */
 async function insertNewUser(user) {
-    user = extractValidFields(user, UserRegisterSchema)
     const db = getDb()
     const collection = db.collection('users')
     const duplicateEmail = await collection.find({ email: user.email }).toArray()
