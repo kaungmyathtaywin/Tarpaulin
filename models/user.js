@@ -8,6 +8,13 @@ const { getDb } = require('../lib/mongo')
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
 
+
+/**
+ * =============================================================================
+ * Validation Protocols
+ * =============================================================================
+ */
+
 /**
  * Schema describing required/optional fields to register a new user
  */
@@ -21,7 +28,7 @@ const UserSchema = joi.object({
 /**
  * Middleware to validate the request body against user schema
  */ 
-function validateUser(req, res, next) {
+exports.validateUserBody = function (req, res, next) {
     const result = UserSchema.validate(req.body, { allowUnknown: false, presence: 'optional' });
     if (result.error) {
         res.status(400).send({
@@ -31,13 +38,43 @@ function validateUser(req, res, next) {
         next();
     }
 }
-exports.validateUser = validateUser
+
+
+/**
+ * =============================================================================
+ * User Authentication Protocols
+ * =============================================================================
+ */
+
+/*
+ * Middleware to authenticate user agaist its credentials
+ */
+exports.logUserIn = async function (req, res, next) {
+    const db = getDb()
+    const collection = db.collection('users')
+    const result = await collection.find({ email: req.body.email }).toArray()
+    const user = result.length > 0 ? result[0] : null
+
+    if (!user && await bcrypt.compare(req.body.password, user.password)) {
+        res.status(401).send({
+            error: "Invalid authentication credentials."
+        })
+    } 
+    next()
+}
+
+
+/**
+ * =============================================================================
+ * Data Access Methods
+ * =============================================================================
+ */
 
 /*
  * Executes a DB query to insert a new business into the database.  Returns
  * a Promise that resolves to the ID of the newly-created business entry.
  */
-async function insertNewUser(user) {
+exports.insertNewUser = async function (user) {
     const db = getDb()
     const collection = db.collection('users')
     const duplicateEmail = await collection.find({ email: user.email }).toArray()
@@ -54,38 +91,38 @@ async function insertNewUser(user) {
         return null
     }
 }
-exports.insertNewUser = insertNewUser
 
 /*
  * Executes a DB query to fetch a specific user.  Returns
  * a Promise that resolves to a user object if given a valid id or else returns null.
  */
-async function getUserbyId(id, includePassword) {
+exports.getUserbyId = async function (id, includePassword) {
     const db = getDb()
     const collection = db.collection('users')
 
     if (!ObjectId.isValid(id)) {
         return null
-    } else {
-        const results = await collection
-        .find({ _id: new ObjectId(id) })
-        .project( includePassword ? {} : { password: 0 })
-        .toArray()
-        return results[0]
-    }
+    } 
+
+    const results = await collection
+    .find({ _id: new ObjectId(id) })
+    .project( includePassword ? {} : { password: 0 })
+    .toArray()
+    return results[0]
 }
-exports.getUserbyId = getUserbyId
 
 /*
- * Executes a DB query to compare the credentials from the client and the database.  Returns
- * a Promise that resolves to a Boolean to indicate the credentials are valid or not.
+ * Executes a DB query to fetch a user by email. Returns
+ * a Promise that resolves to ID of fetched user or null if the user doesn't exist.
  */
-async function validateCredentials(email, password) {
+exports.getUserbyEmail = async function (email) {
     const db = getDb()
     const collection = db.collection('users')
     const result = await collection.find({ email: email }).toArray()
-    const user = result.length > 0 ? result[0] : null
 
-    return user && await bcrypt.compare(password, user.password)
+    if (result) {
+        return result[0]._id.toString()
+    } else {
+        return null
+    }
 }
-exports.validateCredentials = validateCredentials

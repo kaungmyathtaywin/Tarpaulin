@@ -7,8 +7,11 @@ const { getDb } = require("../lib/mongo")
 
 const joi = require("joi");
 
+
 /**
- * --- Validation protocols ---
+ * =============================================================================
+ * Validation Protocols
+ * =============================================================================
  */
 
 /**
@@ -60,7 +63,60 @@ exports.validateEnrollmentBody = function (req, res, next) {
 }
 
 /**
- * --- Data access methods ---
+ * Middleware to verify whether the requested course exist or not
+ */
+exports.validateCourseId = async function (req, res, next) {
+    try {
+        const course = await getCoursebyId(req.params.courseId)
+    
+        if (!course) {
+            return res.status(404).send({
+                error: "Specified course does not exist."
+            })
+        }
+        return next()
+    } catch (error) {
+        next(error)
+    }
+}
+
+/**
+ * =============================================================================
+ * Course Authentication Protocols
+ * =============================================================================
+ */
+
+
+/**
+ * Middleware to authorize admin/instructor role for accessing course data
+ */
+exports.authorizeCourseAccess = async function (req, res, next) {
+    try {
+        const course = await getCoursebyId(req.params.courseId)
+
+        if (!course) {
+            return res.status(404).send({
+                error: "Specified course does not exist."
+            })
+        }
+
+        if (req.role === "admin" || (req.role === "instructor" && req.user === course.instructorId.toString())) {
+            return next();
+        } else {
+            return res.status(403).send({ 
+                error: "Invalid authorization to access this resource." 
+            })
+        }
+    } catch (error) {
+        next(error)
+    }
+}
+
+
+/**
+ * =============================================================================
+ * Data Access Methods
+ * =============================================================================
  */
 
 /**

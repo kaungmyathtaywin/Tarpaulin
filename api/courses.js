@@ -1,16 +1,21 @@
+/**
+ * API sub-router for course collection endpoints.
+ */
+
 const { Router } = require('express')
 const { requireAuthentication, authorizeAdminAccess } = require('../lib/auth')
-const { validateCourseId, authorizeCourseAccess } = require('../lib/course-auth')
-const { 
+const {
+    validateCourseBody, 
+    validateEnrollmentBody,
+    getCoursePage,
     insertNewCourse, 
     getCoursebyId, 
     updateCoursebyId, 
     deleteCoursebyId, 
     updateEnrollment, 
-    validateCourseBody, 
-    validateEnrollmentBody,
     fetchStudents,
-    getCoursePage
+    validateCourseId,
+    authorizeCourseAccess
 } = require('../models/course')
 
 const router = Router()

@@ -3,89 +3,91 @@
  */
 
 const { Router } = require('express')
-const { insertNewUser, getUserbyId, validateCredentials, validateUser } = require('../models/user')
-const { generateAuthToken, requireAuthentication } = require('../lib/auth')
-const { getDb } = require('../lib/mongo')
+const {
+    validateUserBody,
+    insertNewUser, 
+    getUserbyId,
+    logUserIn,
+    getUserbyEmail
+} = require('../models/user')
+const { 
+    generateAuthToken, 
+    requireAuthentication, 
+    authorizeAdminAccess 
+} = require('../lib/auth')
 
 const router = Router()
 
 /**
  * POST /users - Route to create new users
  */
-router.post('/', validateUser, async function (req, res, next) {
-    if (req.body.role === "student") {
+router.post('/', 
+    validateUserBody, 
+    async function (req, res, next) {
+        if (req.body.role === "student") {
+            try {
+                const id = await insertNewUser(req.body)
+                respondUserCreation(res, id)
+            } catch (error) {
+                next(error)
+            }
+        } else {
+            next()
+        }
+    }, 
+    requireAuthentication,
+    authorizeAdminAccess,
+    async function(req, res, next) {
         try {
             const id = await insertNewUser(req.body)
             respondUserCreation(res, id)
         } catch (error) {
             next(error)
         }
-    } else {
-        next()
-    }
-}, requireAuthentication, async function(req, res, next) {
-    if (req.role === "admin") {
-        try {
-            const id = await insertNewUser(req.body)
-            respondUserCreation(res, id)
-        } catch (error) {
-            next(error)
-        } 
-    } else {
-        res.status(403).send({
-            error: "Invalid authorization for registering this role."
-        })
-    }
 })
 
 /**
  * POST /users/login - Route to login existing users
  */
-router.post('/login', validateUser, async function (req, res, next) {
-    try {
-        const authenticated = await validateCredentials(req.body.email, req.body.password)
-        const db = getDb()
-        const collection = db.collection('users')
-
-        if (authenticated) {
-            const result = await collection.find({ email: req.body.email }).toArray()
-            const id = result[0]._id.toString()
-            const token = generateAuthToken(id)
+router.post('/login', 
+    validateUserBody,
+    logUserIn,
+    async function (req, res, next) {
+        try {
+            const userId = await getUserbyEmail(req.body.email)
+            const token = generateAuthToken(userId)
 
             res.status(200).send({
                 token: token
             })
-        } else {
-            res.status(401).send({
-                error: "Invalid authentication credentials!"
-            })
+        } catch (error) {
+            next(error)
         }
-    } catch (error) {
-        next(error)
-    }
 })
 
 /**
  * GET /users/{id} - Route to fetch a specific user's information
  */
-router.get('/:userId', requireAuthentication, async function (req, res, next) {
-    if (req.user !== req.params.userId) {
-        return res.status(403).send({
-            error: "Access to this resource is forbidden."
-        })
-    }
-
-    try {
-        const user = await getUserbyId(req.params.userId)
-        // TODO: Join student and instructor roles with courses
-        if (user) {
-            res.status(200).send(user)
-        } else {
-            next()
+router.get('/:userId', 
+    requireAuthentication, 
+    async function (req, res, next) {
+        if (req.user !== req.params.userId) {
+            return res.status(403).send({
+                error: "Access to this resource is forbidden."
+            })
         }
-    } catch (error) {
-        next(error)
-    }
+
+        try {
+            const user = await getUserbyId(req.params.userId)
+            // TODO: Join student and instructor roles with courses
+            if (user) {
+                res.status(200).send(user)
+            } else {
+                next()
+            }
+        } catch (error) {
+            next(error)
+        }
 })
 
 /**
