@@ -4,10 +4,10 @@
 
 const { ObjectId } = require('mongodb')
 const { getDb } = require('../lib/mongo')
+const { extractValidFields } = require('../lib/validation')
 
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
-const { extractValidFields } = require('../lib/validation')
 
 
 /**
@@ -138,12 +138,8 @@ exports.getUserbyEmail = async function (email) {
  * user entries.
  */
 exports.bulkInsertNewUsers = async (users) => {
-    const usersToInsert = users.map(function (user) {
-        return extractValidFields(user, UserSchema)
-    })
-
     const db = getDb()
     const collection = db.collection('users')
-    const result = await collection.insertMany(usersToInsert)
+    const result = await collection.insertMany(users)
     return result.insertedId
 }
