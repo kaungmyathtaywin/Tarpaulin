@@ -193,7 +193,7 @@ exports.deleteCourseById = async (id) => {
 }
 
 /**
- * Executes a DB query to fetch students that are enrolled in specified course.
+ * Executes a DB query to fetch students that are enrolled in the specified course.
  * 
  * Returns a Promise that resolves to a list of students enrolled in a course.
  */
@@ -253,4 +253,30 @@ exports.updateEnrollment = async (studentsToAdd, studentsToRemove, courseId) => 
     }
 
     return "Update Successful"
+}
+
+/**
+ * Executes a DB query to fetch assignments associated with a course.
+ * 
+ * Returns a Promise that resolves to a list of assignments associated with a course. 
+ */
+exports.fetchAssignments = async (courseId) => {
+    const db = getDb()
+    const collection = db.collection('courses')
+    const pipeline = [
+        { $match: { _id: new ObjectId(courseId) }},
+        { $lookup: {
+            from: 'assignments',
+            localField: 'assignments',
+            foreignField: '_id',
+            as: 'assignments'
+        }},
+        { $project: {
+            _id: 0,
+            assignments: 1
+        }}
+    ]
+
+    const results = await collection.aggregate(pipeline).toArray()
+    return results[0]
 }

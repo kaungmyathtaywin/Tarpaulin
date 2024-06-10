@@ -18,7 +18,8 @@ const {
     updateCourseById, 
     deleteCourseById, 
     updateEnrollment, 
-    fetchStudents
+    fetchStudents,
+    fetchAssignments
 } = require('../models/course')
 
 const router = Router()
@@ -153,15 +154,23 @@ router.post('/:courseId/students',
 /**
  * GET /courses/{courseId}/roster -
  */
-router.get('/:courseId/roster', async function(req, res, next) {
+router.get('/:courseId/roster', async (req, res, next) => {
     // TODO:
 })
 
 /**
- * GET /courses/{courseId}/assignments -
+ * GET /courses/{courseId}/assignments - Route to fetch a list of assignments for a course
  */
-router.get('/:courseId/assignments', async function(req, res, next) {
-    // TODO:
+router.get('/:courseId/assignments',
+    validateCourseId,
+    async (req, res, next) => {
+        try {
+            const assignments = await fetchAssignments(req.params.courseId)
+            
+            res.status(200).send(assignments)
+        } catch (error) {
+            next(error)
+        }
 })
 
 module.exports = router
