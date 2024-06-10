@@ -7,6 +7,7 @@ const { getDb } = require('../lib/mongo')
 
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
+const { extractValidFields } = require('../lib/validation')
 
 
 /**
@@ -71,8 +72,9 @@ exports.logUserIn = async function (req, res, next) {
  */
 
 /*
- * Executes a DB query to insert a new business into the database.  Returns
- * a Promise that resolves to the ID of the newly-created business entry.
+ * Executes a DB query to insert a new business into the database.  
+ *
+ * Returns a Promise that resolves to the ID of the newly-created business entry.
  */
 exports.insertNewUser = async function (user) {
     const db = getDb()
@@ -93,8 +95,9 @@ exports.insertNewUser = async function (user) {
 }
 
 /*
- * Executes a DB query to fetch a specific user.  Returns
- * a Promise that resolves to a user object if given a valid id or else returns null.
+ * Executes a DB query to fetch a specific user.  
+ * 
+ * Returns a Promise that resolves to a user object if given a valid id or else returns null.
  */
 exports.getUserbyId = async function (id, includePassword) {
     const db = getDb()
@@ -112,8 +115,9 @@ exports.getUserbyId = async function (id, includePassword) {
 }
 
 /*
- * Executes a DB query to fetch a user by email. Returns
- * a Promise that resolves to ID of fetched user or null if the user doesn't exist.
+ * Executes a DB query to fetch a user by email.
+ * 
+ * Returns a Promise that resolves to ID of fetched user or null if the user doesn't exist.
  */
 exports.getUserbyEmail = async function (email) {
     const db = getDb()
@@ -125,4 +129,21 @@ exports.getUserbyEmail = async function (email) {
     } else {
         return null
     }
+}
+
+/*
+ * Executes a DB query to bulk insert an array new users into the database.
+ * 
+ * Returns a Promise that resolves to a map of the IDs of the newly-created
+ * user entries.
+ */
+exports.bulkInsertNewUsers = async (users) => {
+    const usersToInsert = users.map(function (user) {
+        return extractValidFields(user, UserSchema)
+    })
+
+    const db = getDb()
+    const collection = db.collection('users')
+    const result = await collection.insertMany(usersToInsert)
+    return result.insertedId
 }
