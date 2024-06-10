@@ -3,19 +3,22 @@
  */
 
 const { Router } = require('express')
-const { requireAuthentication, authorizeAdminAccess } = require('../lib/auth')
+const { validateCourseId } = require('../lib/validation')
+const { 
+    requireAuthentication, 
+    authorizeAdminAccess, 
+    authorizeCourseRelatedAccess 
+} = require('../lib/auth')
 const {
     validateCourseBody, 
     validateEnrollmentBody,
     getCoursePage,
     insertNewCourse, 
-    getCoursebyId, 
-    updateCoursebyId, 
-    deleteCoursebyId, 
+    getCourseById, 
+    updateCourseById, 
+    deleteCourseById, 
     updateEnrollment, 
-    fetchStudents,
-    validateCourseId,
-    authorizeCourseAccess
+    fetchStudents
 } = require('../models/course')
 
 const router = Router()
@@ -23,7 +26,7 @@ const router = Router()
 /**
  * GET /courses - Route to fetch a list of courses specified by query parameter
  */
-router.get('/', async function (req, res, next) {
+router.get('/', async (req, res, next) => {
     try {
         const coursePage = await getCoursePage(
             parseInt(req.query.page) || 1, 
@@ -45,7 +48,7 @@ router.post('/',
     requireAuthentication,
     authorizeAdminAccess,
     validateCourseBody, 
-    async function(req, res, next) {
+    async (req, res, next) => {
         try {
             const id = await insertNewCourse(req.body)
 
@@ -60,9 +63,9 @@ router.post('/',
  */
 router.get('/:courseId', 
     validateCourseId,
-    async function(req, res, next) {
+    async (req, res, next) => {
         try {
-            const course = await getCoursebyId(req.params.courseId)
+            const course = await getCourseById(req.params.courseId)
 
             res.status(200).send(course)
         } catch (error) {
@@ -74,13 +77,13 @@ router.get('/:courseId',
  * PATCH /courses/{id} - Route to update the specified course's information
  */
 router.patch('/:courseId', 
-    requireAuthentication, 
-    authorizeCourseAccess, 
-    validateCourseBody,
+    requireAuthentication,
     validateCourseId,
-    async function(req, res, next) {
+    authorizeCourseRelatedAccess, 
+    validateCourseBody,
+    async (req, res, next) => {
         try {
-            await updateCoursebyId(req.params.courseId, req)
+            await updateCourseById(req.params.courseId, req)
 
             res.status(200).send()
         } catch (error) {
@@ -93,11 +96,11 @@ router.patch('/:courseId',
  */
 router.delete('/:courseId', 
     requireAuthentication,
+    validateCourseId,
     authorizeAdminAccess,
-    validateCourseId, 
-    async function(req, res, next) {
+    async (req, res, next) => {
         try {
-            await deleteCoursebyId(req.params.courseId)
+            await deleteCourseById(req.params.courseId)
             
             res.status(204).send()
         } catch (error) {
@@ -110,9 +113,9 @@ router.delete('/:courseId',
  */
 router.get('/:courseId/students', 
     requireAuthentication,
-    authorizeCourseAccess,
     validateCourseId,
-    async function(req, res, next) {
+    authorizeCourseRelatedAccess,
+    async (req, res, next) => {
         try {
             const students = await fetchStudents(req.params.courseId)
             
@@ -127,10 +130,10 @@ router.get('/:courseId/students',
  */
 router.post('/:courseId/students', 
     requireAuthentication,
-    authorizeCourseAccess,
-    validateEnrollmentBody,
     validateCourseId,
-    async function(req, res, next) {
+    authorizeCourseRelatedAccess,
+    validateEnrollmentBody,
+    async (req, res, next) => {
         try {
             const { add, remove } = req.body
             const result = await updateEnrollment(add, remove, req.params.courseId)
@@ -148,14 +151,14 @@ router.post('/:courseId/students',
 })
 
 /**
- * GET /courses/{courseId}/roster
+ * GET /courses/{courseId}/roster -
  */
 router.get('/:courseId/roster', async function(req, res, next) {
     // TODO:
 })
 
 /**
- * GET /courses/{courseId}/assignments
+ * GET /courses/{courseId}/assignments -
  */
 router.get('/:courseId/assignments', async function(req, res, next) {
     // TODO:

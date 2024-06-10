@@ -18,12 +18,13 @@ const joi = require("joi");
  * Schema describing required/optional fields to create a new course
  */
 const CourseSchema = joi.object({
-    subject: joi.string(),
-    number: joi.string(),
-    title: joi.string(),
-    term: joi.string(),
-    instructorId: joi.string().length(24).hex(),
-    students: joi.array().items(joi.string().length(24).hex())
+    subject: joi.string().required(),
+    number: joi.string().required(),
+    title: joi.string().required(),
+    term: joi.string().required(),
+    instructorId: joi.string().length(24).hex().required(),
+    students: joi.array().items(joi.string().length(24).hex()),
+    assignments: joi.array().items(joi.string().length(24).hex())
 })
 
 /**
@@ -37,7 +38,7 @@ const ModifyEnrollmentSchema = joi.object({
 /**
  * Middleware to validate the request body against course schema
  */ 
-exports.validateCourseBody = function (req, res, next) {
+exports.validateCourseBody = (req, res, next) => {
     const result = CourseSchema.validate(req.body, { allowUnknown: false, presence: 'optional' });
     if (result.error) {
         res.status(400).send({
@@ -51,7 +52,7 @@ exports.validateCourseBody = function (req, res, next) {
 /** 
  * Middleware to validate the request body for student enrollment
  */
-exports.validateEnrollmentBody = function (req, res, next) {
+exports.validateEnrollmentBody = (req, res, next) => {
     const result = ModifyEnrollmentSchema.validate(req.body, { allowUnknown: false, presence: 'optional' })
     if (result.error) {
         res.status(400).send({
@@ -59,56 +60,6 @@ exports.validateEnrollmentBody = function (req, res, next) {
         })
     } else {
         next()
-    }
-}
-
-/**
- * Middleware to verify whether the requested course exist or not
- */
-exports.validateCourseId = async function (req, res, next) {
-    try {
-        const course = await getCoursebyId(req.params.courseId)
-    
-        if (!course) {
-            return res.status(404).send({
-                error: "Specified course does not exist."
-            })
-        }
-        return next()
-    } catch (error) {
-        next(error)
-    }
-}
-
-/**
- * =============================================================================
- * Course Authentication Protocols
- * =============================================================================
- */
-
-
-/**
- * Middleware to authorize admin/instructor role for accessing course data
- */
-exports.authorizeCourseAccess = async function (req, res, next) {
-    try {
-        const course = await getCoursebyId(req.params.courseId)
-
-        if (!course) {
-            return res.status(404).send({
-                error: "Specified course does not exist."
-            })
-        }
-
-        if (req.role === "admin" || (req.role === "instructor" && req.user === course.instructorId.toString())) {
-            return next();
-        } else {
-            return res.status(403).send({ 
-                error: "Invalid authorization to access this resource." 
-            })
-        }
-    } catch (error) {
-        next(error)
     }
 }
 
@@ -120,10 +71,11 @@ exports.authorizeCourseAccess = async function (req, res, next) {
  */
 
 /**
- * Executes a DB query to return a single page of courses.  Returns a
- * Promise that resolves to an array containing the fetched page of courses.
+ * Executes a DB query to return a single page of courses.
+ * 
+ * Returns a Promise that resolves to an array containing the fetched page of courses.
  */
-exports.getCoursePage = async function (page, subject, number, term) {
+exports.getCoursePage = async (page, subject, number, term) => {
     const db = getDb()
     const collection = db.collection("courses")
 
@@ -159,10 +111,11 @@ exports.getCoursePage = async function (page, subject, number, term) {
 }
 
 /**
- * Executes a DB query to insert a new course into the database.  Returns
- * a Promise that resolves to the ID of the newly-created course entry.
+ * Executes a DB query to insert a new course into the database.
+ * 
+ * Returns a Promise that resolves to the ID of the newly-created course entry.
  */
-exports.insertNewCourse = async function (course) {
+exports.insertNewCourse = async (course) => {
     const db = getDb()
     const collection = db.collection('courses')
     const result = await collection.insertOne({ 
@@ -173,10 +126,11 @@ exports.insertNewCourse = async function (course) {
 }
 
 /**
- * Executes a DB query to fetch a course by ID.  Returns
- * a Promise that resolves to a summary of a given course.
+ * Executes a DB query to fetch a course by ID.
+ * 
+ * Returns a Promise that resolves to a summary of a given course.
  */
-exports.getCoursebyId = async function (id) {
+exports.getCourseById = async (id) => {
     const db = getDb()
     const collection = db.collection('courses')
 
@@ -186,16 +140,18 @@ exports.getCoursebyId = async function (id) {
 
     const results = await collection
     .find({ _id: new ObjectId(id) })
+    .project({ students: 0 })
     .toArray()
     return results[0] 
 }
 
 /**
- * Executes a DB query to update a specific course by ID. Returns
- * a Promise that resolves to an updated course object or null if the course 
- * to update does not exist.
+ * Executes a DB query to update a specific course by ID.
+ *  
+ * Returns a Promise that resolves to an updated course object or
+ * null if the course to update does not exist.
  */
-exports.updateCoursebyId = async function (id, req) {
+exports.updateCourseById = async (id, req) => {
     const db = getDb()
     const collection = db.collection('courses')
 
@@ -203,21 +159,26 @@ exports.updateCoursebyId = async function (id, req) {
         return null
     }
 
+    const updateData = { ...req.body }
+    delete updateData.students
+    delete updateData.assignments
+
     const result = await collection.findOneAndUpdate(
         { _id: new ObjectId(id) },
-        { $set: req.body },
-        { new: true, runValidators: true }
+        { $set: updateData },
+        { returnDocument: "after", runValidators: true }
     )
 
     return result
 }
 
 /**
- * Executes a DB query to delete a specific course by ID. Returns
- * a Promise that resolves to deleted count or null if the course 
- * to delete does not exist.
+ * Executes a DB query to delete a specific course by ID.
+ * 
+ * Returns a Promise that resolves to deleted count or 
+ * null if the course to delete does not exist.
  */
-exports.deleteCoursebyId = async function (id) {
+exports.deleteCourseById = async (id) => {
     const db = getDb()
     const collection = db.collection('courses')
 
@@ -232,31 +193,37 @@ exports.deleteCoursebyId = async function (id) {
 }
 
 /**
- * Executes a DB query to fetch students that are enrolled in specified course. Returns
- * a Promise that resolves to a list of students enrolled in a course.
+ * Executes a DB query to fetch students that are enrolled in specified course.
+ * 
+ * Returns a Promise that resolves to a list of students enrolled in a course.
  */
-exports.fetchStudents = async function(courseId) {
+exports.fetchStudents = async (courseId) => {
     const db = getDb()
     const collection = db.collection('courses')
+    const pipeline = [
+        { $match: { _id: new ObjectId(courseId) }},
+        { $lookup: {
+            from: 'users',
+            localField: 'students',
+            foreignField: '_id',
+            as: 'students'
+        }},
+        { $project: {
+            _id: 0,
+            students: 1
+        }}
+    ]
 
-    const results = await collection
-    .find({ _id: new ObjectId(courseId) })
-    .project({
-        _id: 0,
-        subject: 0,
-        number: 0,
-        title: 0,
-        term: 0,
-        instructorId: 0
-    }).toArray()
+    const results = await collection.aggregate(pipeline).toArray()
     return results[0]
 }
 
 /**
- * Executes a DB query to update enrollments for a course. Returns
- * a sucess message or null if students to add/remove do not exist in the database.
+ * Executes a DB query to update enrollments for a course.
+ * 
+ * Returns a sucess message or null if students to add/remove do not exist in the database.
  */
-exports.updateEnrollment = async function (studentsToAdd, studentsToRemove, courseId) {
+exports.updateEnrollment = async (studentsToAdd, studentsToRemove, courseId) => {
     const db = getDb()
     const users = db.collection('users')
     const courses = db.collection('courses')
