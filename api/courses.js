@@ -1,96 +1,133 @@
 const { Router } = require('express')
-const { requireAuthentication } = require('../lib/auth')
-const { insertNewCourse, getCoursebyId, updateCoursebyId, validateCourse, deleteCoursebyId } = require('../models/course')
+const { requireAuthentication, adminAuthentication } = require('../lib/auth')
+const { 
+    insertNewCourse, 
+    getCoursebyId, 
+    updateCoursebyId, 
+    deleteCoursebyId, 
+    updateEnrollment, 
+    validateCourseBody, 
+    validateEnrollmentBody,
+    validateCourseId,
+    courseUpdateAuthentication
+} = require('../models/course')
+const { func } = require('joi')
 
 const router = Router()
+
+router.get('/', async function (req, res, next) {
+    // TODO:
+})
 
 /**
  * POST /courses - Route to create a new course
  */
-router.post('/', requireAuthentication, validateCourse, async function(req, res, next) {
-    if (req.role === "admin") {
+router.post('/', 
+    requireAuthentication,
+    adminAuthentication,
+    validateCourseBody, 
+    async function(req, res, next) {
         try {
             const id = await insertNewCourse(req.body)
+
             res.status(201).send({ _id: id })
         } catch (error) {
             next(error)
         }
-    } else {
-        res.status(403).send({
-            error: "Invalid authorization for creating this course."
-        })
-    }
 })
+
 
 /**
  * GET /courses/{id} - Route to fetch a specific course information
  */
-router.get('/:courseId', async function(req, res, next) {
-    try {
-        const course = await getCoursebyId(req.params.courseId)
+router.get('/:courseId', 
+    validateCourseId,
+    async function(req, res, next) {
+        try {
+            const course = await getCoursebyId(req.params.courseId)
 
-        if (course) {
             res.status(200).send(course)
-        } else {
-           res.status(404).send({
-                error: "Specified course does not exist."
-           })
+        } catch (error) {
+            next(error)
         }
-    } catch (error) {
-        next(error)
-    }
 })
 
 /**
- * PUT /courses/{id} - Route to update a specific course information
+ * PATCH /courses/{id} - Route to update a specific course information
  */
-router.put('/:courseId', requireAuthentication, validateCourse, async function(req, res, next) {
-    try {
-        const course = await getCoursebyId(req.params.courseId)
+router.patch('/:courseId', 
+    requireAuthentication, 
+    courseUpdateAuthentication, 
+    validateCourseBody,
+    validateCourseId,
+    async function(req, res, next) {
+        try {
+            await updateCoursebyId(req.params.courseId, req)
 
-        if (course) {
-            if (req.role === "admin" || (req.role === "instructor" && req.user === course.instructorId.toString())) {
-                const result = await updateCoursebyId(req.params.courseId, req)
-
-                res.status(200).send()
-            } else {
-                return res.status(403).send({
-                    error: "Invalid authorization to update the course."
-                })
-            }
-        } else {
-           res.status(404).send({
-                error: "Specified course does not exist."
-           })
+            res.status(200).send()
+        } catch (error) {
+            next(error)
         }
-    } catch (error) {
-        next(error)
-    }
 })
 
 /**
  * DELETE /courses/{id} - Route to delete a specific course
  */
-router.delete('/:courseId', requireAuthentication, async function(req, res, next) {
-    if (req.role === "admin") {
+router.delete('/:courseId', 
+    requireAuthentication,
+    adminAuthentication,
+    validateCourseId, 
+    async function(req, res, next) {
         try {
-            const deletedCount = await deleteCoursebyId(req.params.courseId)
+            await deleteCoursebyId(req.params.courseId)
             
-            if (deletedCount) {
-                res.status(204).send()
+            res.status(204).send()
+        } catch (error) {
+            next(error)
+        }
+})
+
+router.get('/', async function(req, res, next) {
+    // TODO:
+})
+
+/**
+ * POST /courses/{courseId}/students
+ */
+router.post('/:courseId/students', 
+    requireAuthentication,
+    courseUpdateAuthentication,
+    validateEnrollmentBody,
+    validateCourseId,
+    async function(req, res, next) {
+        try {
+            const { add, remove } = req.body
+            const result = await updateEnrollment(add, remove, course._id)
+
+            if (result) {
+                return res.status(201).send()
             } else {
-               res.status(404).send({
-                    error: "Specified course does not exist."
-               })
+                return res.status(400).send({
+                    error: "Please make sure all the students to add/remove are valid."
+                })
             }
         } catch (error) {
             next(error)
         }
-    } else {
-        res.status(403).send({
-            error: "Invalid authorization for deleting the course."
-        })
-    }
+})
+
+/**
+ * GET /courses/{courseId}/roster
+ */
+router.get('/:courseId/roster', async function(req, res, next) {
+    // TODO:
+})
+
+/**
+ * GET /courses/{courseId}/assignments
+ */
+router.get('/:courseId/assignments', async function(req, res, next) {
+    // TODO:
 })
 
 module.exports = router
