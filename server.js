@@ -1,11 +1,11 @@
 require('dotenv').config()
 
+const { connectToDb } = require('./lib/mongo')
+const { redisClient, rateLimit } = require('./lib/redis')
+
 const express = require('express')
 const morgan = require('morgan')
-
 const api = require('./api')
-const { connectToDb } = require('./lib/mongo')
-
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -13,9 +13,8 @@ app.use(morgan('dev'))
 
 app.use(express.json())
 
-/**
- * All the routes are in api folder
- */
+app.use(rateLimit)
+
 app.use('/', api)
 
 app.use('*', function (req, res, next) {
@@ -31,8 +30,10 @@ app.use('*', function (err, req, res, next) {
     })
 })
 
-connectToDb().then(function () {
-    app.listen(port, function () {
-        console.log("== Server is running on port", port)
+connectToDb().then(() => {
+    redisClient.connect().then( () => {
+        app.listen(port, function () {
+            console.log("== Server is running on port", port)
+        })
     })
 })

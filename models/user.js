@@ -43,30 +43,6 @@ exports.validateUserBody = function (req, res, next) {
 
 /**
  * =============================================================================
- * User Authentication Protocols
- * =============================================================================
- */
-
-/*
- * Middleware to authenticate user agaist its credentials
- */
-exports.logUserIn = async function (req, res, next) {
-    const db = getDb()
-    const collection = db.collection('users')
-    const result = await collection.find({ email: req.body.email }).toArray()
-    const user = result.length > 0 ? result[0] : null
-
-    if (!user && await bcrypt.compare(req.body.password, user.password)) {
-        res.status(401).send({
-            error: "Invalid authentication credentials."
-        })
-    } 
-    next()
-}
-
-
-/**
- * =============================================================================
  * Data Access Methods
  * =============================================================================
  */

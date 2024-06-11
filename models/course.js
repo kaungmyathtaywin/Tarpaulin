@@ -98,7 +98,7 @@ exports.getCoursePage = async (page, subject, number, term) => {
         .sort({ _id: 1 })
         .skip(offset)
         .limit(pageSize)
-        .project({ students: 0 })
+        .project({ students: 0, assignments: 0 })
         .toArray()
 
     return {
