@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-container
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=hunter2
+      - MONGO_INITDB_DATABASE=tarpaulin
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+
+  api-server:
+    build: .
+    container_name: api-server-container
+    environment:
+      - PORT=8000
+      - MONGO_DB=tarpaulin
+      - MONGO_ROOT_USER=root
+      - MONGO_ROOT_PASSWORD=hunter2
+      - MONGO_USER=tarpaulin
+      - MONGO_PASSWORD=hunter2
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - REDIS_HOST=redis
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    container_name: redis-container
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
