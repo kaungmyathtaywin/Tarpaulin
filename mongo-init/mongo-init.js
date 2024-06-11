@@ -1,3 +1,8 @@
+/**
+ * Script to create read/write access user for Tarpaulin DB 
+ * and insert admin user for Tarpaulin app
+ */
+
 db.createUser({
     user: "tarpaulin",
     pwd: "hunter2",
