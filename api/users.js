@@ -8,10 +8,10 @@ const {
     insertNewUser, 
     getUserById,
     getUserByEmail,
-    logUserIn
 } = require('../models/user')
 const { 
-    generateAuthToken, 
+    generateAuthToken,
+    logUserIn,
     requireAuthentication, 
     authorizeAdminAccess 
 } = require('../lib/auth')
