@@ -3,7 +3,7 @@
  */
 
 const { Router } = require('express')
-const { validateCourseId } = require('../lib/validation')
+const { validateCourseId, validateInstructorId } = require('../lib/validation')
 const { 
     requireAuthentication, 
     authorizeAdminAccess, 
@@ -48,7 +48,8 @@ router.get('/', async (req, res, next) => {
 router.post('/', 
     requireAuthentication,
     authorizeAdminAccess,
-    validateCourseBody, 
+    validateCourseBody,
+    validateInstructorId,
     async (req, res, next) => {
         try {
             const id = await insertNewCourse(req.body)

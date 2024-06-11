@@ -4,7 +4,6 @@
 
 const { ObjectId } = require('mongodb')
 const { getDb } = require('../lib/mongo')
-const { extractValidFields } = require('../lib/validation')
 
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
@@ -23,7 +22,8 @@ const UserSchema = joi.object({
     name: joi.string(),
     email: joi.string(),
     password: joi.string(),
-    role: joi.string()
+    role: joi.string(),
+    courses: joi.array().items(joi.string().length(24).hex())
 })
 
 /**
@@ -99,7 +99,7 @@ exports.insertNewUser = async function (user) {
  * 
  * Returns a Promise that resolves to a user object if given a valid id or else returns null.
  */
-exports.getUserbyId = async function (id, includePassword) {
+exports.getUserById = async function (id, includePassword) {
     const db = getDb()
     const collection = db.collection('users')
 
@@ -119,7 +119,7 @@ exports.getUserbyId = async function (id, includePassword) {
  * 
  * Returns a Promise that resolves to ID of fetched user or null if the user doesn't exist.
  */
-exports.getUserbyEmail = async function (email) {
+exports.getUserByEmail = async function (email) {
     const db = getDb()
     const collection = db.collection('users')
     const result = await collection.find({ email: email }).toArray()
