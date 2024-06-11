@@ -57,7 +57,10 @@ exports.insertNewAssignment = async (assignment, courseId) => {
     const assignments = db.collection('assignments')
     const courses = db.collection('courses')
 
-    const result = await assignments.insertOne(assignment)
+    const result = await assignments.insertOne({
+        ...assignment,
+        courseId: new ObjectId(courseId)
+    })
 
     await courses.updateOne(
         { _id: new ObjectId(courseId) },
