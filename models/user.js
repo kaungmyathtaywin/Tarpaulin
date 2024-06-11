@@ -138,12 +138,8 @@ exports.getUserbyEmail = async function (email) {
  * user entries.
  */
 exports.bulkInsertNewUsers = async (users) => {
-    const usersToInsert = users.map(function (user) {
-        return extractValidFields(user, UserSchema)
-    })
-
     const db = getDb()
     const collection = db.collection('users')
-    const result = await collection.insertMany(usersToInsert)
-    return result.insertedId
+    const result = await collection.insertMany(users)
+    return result.insertedIds
 }

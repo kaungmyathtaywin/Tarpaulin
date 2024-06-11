@@ -2,12 +2,14 @@
  * Assignment schema and data accessor methods
  */
 
-const { ObjectId, ReturnDocument } = require("mongodb")
+const { ObjectId, ReturnDocument, Timestamp } = require("mongodb")
 const { getCoursebyId } = require("./course")
 const { getDb } = require("../lib/mongo")
 
+const multer = require("multer")
+const crypto = require("node:crypto")
 const joi = require("joi")
-
+const path = require('path');
 
 /**
  * =============================================================================
@@ -72,7 +74,7 @@ exports.insertNewAssignment = async (assignment, courseId) => {
  * 
  * Returns a Promise that resolves to a summary of a given assignment. 
  */
-exports.getAssignmentById = async (id) => {
+async function getAssignmentById(id, showSubmissions) {
     const db = getDb()
     const collection = db.collection('assignments')
 
@@ -82,11 +84,11 @@ exports.getAssignmentById = async (id) => {
 
     const results = await collection
     .find({ _id: new ObjectId(id) })
-    .project({ submissions: 0 })
+    .project({ submissions: 0 || showSubmissions })
     .toArray()
     return results[0] 
 }
-
+exports.getAssignmentById = getAssignmentById
 /**
  * Executes a DB query to update a specific assignment by ID.
  *  
@@ -161,3 +163,100 @@ async function findCourseByAssignmentId(assignmentId) {
     }
 }
 exports.findCourseByAssignmentId = findCourseByAssignmentId
+
+/**
+ * Allows to verify the valid submission types 
+ */
+const submissionTypes = { "application/pdf": "pdf", "application/msword": "doc"}
+exports.submissionTypes = submissionTypes
+
+/**
+ * Multer object that stores the submission files in the specified directory to allow user to download later. 
+ * 
+ */
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: path.join(__dirname, "/../media/submissions"),
+        filename: (req, file, callback)=> {
+            const filename = crypto.pseudoRandomBytes(16).toString("hex")
+            const extension = submissionTypes[file.mimetype]
+            callback(null, `${filename}.${extension}`)
+        },
+        fileFilter: (req, file, callback) => {
+            callback(null, !!submissionTypes[file.mimetype])
+        }
+    }),
+})
+exports.upload = upload
+
+/**
+ * Executes a DB query to insert a new submission for an assignment by assignmentId.
+ * 
+ * Returns a Promise that resolves to the ID of the newly-created submission entry.
+ */
+exports.insertNewSubmission = async (assignmentId, submission) => {
+    const db = getDb()
+    const submissions = db.collection('submissions')
+    const assignments = db.collection('assignments')
+
+    const result = await submissions.insertOne({
+        assignmentId: assignmentId,
+        studenId: submission.user,
+        timestamp: new Date().toISOString(),
+        file: submission.file
+    })
+
+    await assignments.updateOne(
+        { _id: new ObjectId(assignmentId) },
+        { $push: { submissions: result.insertedId.toString() } 
+    })
+
+    return result.insertedId
+}
+
+/**
+ * Executes a DB query to fetch a submisison by ID.
+ * 
+ * Returns a Promise that resolves to a summary of a given submission. 
+ */
+async function getSubmissionById(id) {
+    const db = getDb()
+    const collection = db.collection('submissions')
+
+    if (!ObjectId.isValid(id)) {
+        return null
+    }
+
+    const results = await collection
+    .find({ _id: new ObjectId(id) })
+    .toArray()
+    return results[0] 
+}
+exports.getSubmissionById = getSubmissionById
+
+/**
+ * Executes a DB query to fetch all submisisons of an assignment specified by assignmentId.
+ * 
+ * Returns a Promise that resolves to a all the submissions of a given assignment. 
+ */
+async function fetchAssignmentSubmissions(id) {
+    const assignment = await getAssignmentById(id, true)
+    let results = []
+    const submissionIds = assignment.submissions
+
+    for (const submissionId of submissionIds) {
+        const submissionDetail = await getSubmissionById(submissionId);
+        if (submissionDetail) {
+            const {_id, file, ...rest} = submissionDetail
+            const url = `/submissions/media/submissions/${path.basename(file.path)}`
+            results.push({
+                ...rest,
+                file: url
+            });
+        }
+    }
+
+
+    return {submissions: results}
+}
+exports.fetchAssignmentSubmissions = fetchAssignmentSubmissions
