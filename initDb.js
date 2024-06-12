@@ -1,9 +1,13 @@
+/**
+ * Script to populate Tarpaulin DB with users
+ */
+
 require('dotenv').config()
 
-const { connectToDb, closeDbConnection } = require('./lib/mongo')
-const { bulkInsertNewUsers } = require('./models/user')
+const { connectToDb, closeDbConnection } = require('../lib/mongo')
+const { bulkInsertNewUsers } = require('../models/user')
 
-const usersData = require('./data/users.json')
+const usersData = require('../data/users.json')
 
 connectToDb().then(async () => {
     /**

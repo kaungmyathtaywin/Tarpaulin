@@ -32,9 +32,15 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - mongodb
-      - redis
-      - rabbitmq
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    volumes:
+      - ./wait-for-it.sh:/wait-for-it.sh
+    command: ["/wait-for-it.sh", "rabbitmq:5672", "--", "node", "server.js"]
     networks:
       - app-network
 
@@ -43,10 +49,11 @@ services:
     container_name: redis-container
     ports:
       - "6379:6379"
+    depends_on:
+      mongodb:
+        condition: service_started
     networks:
       - app-network
-    depends_on:
-      - mongodb
 
   rabbitmq:
     image: rabbitmq:management
@@ -54,11 +61,12 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    depends_on:
+      mongodb:
+        condition: service_started
     networks:
       - app-network
-    depends_on:
-      - mongodb
-
+    
 networks:
   app-network:
     driver: bridge
