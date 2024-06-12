@@ -9,7 +9,7 @@ const { getDb } = require("../lib/mongo")
 const multer = require("multer")
 const crypto = require("node:crypto")
 const joi = require("joi")
-const path = require('path');
+const path = require('path')
 
 /**
  * =============================================================================
@@ -59,7 +59,10 @@ exports.insertNewAssignment = async (assignment, courseId) => {
     const assignments = db.collection('assignments')
     const courses = db.collection('courses')
 
-    const result = await assignments.insertOne(assignment)
+    const result = await assignments.insertOne({
+        ...assignment,
+        courseId: new ObjectId(courseId)
+    })
 
     await courses.updateOne(
         { _id: new ObjectId(courseId) },
@@ -74,7 +77,7 @@ exports.insertNewAssignment = async (assignment, courseId) => {
  * 
  * Returns a Promise that resolves to a summary of a given assignment. 
  */
-async function getAssignmentById(id, showSubmissions) {
+async function getAssignmentById(id, showSubmissions=false) {
     const db = getDb()
     const collection = db.collection('assignments')
 
@@ -86,7 +89,7 @@ async function getAssignmentById(id, showSubmissions) {
     .find({ _id: new ObjectId(id) })
     .project({ submissions: 0 || showSubmissions })
     .toArray()
-    return results[0] 
+    return results[0]
 }
 exports.getAssignmentById = getAssignmentById
 /**
@@ -202,6 +205,7 @@ exports.insertNewSubmission = async (assignmentId, submission) => {
     const result = await submissions.insertOne({
         assignmentId: assignmentId,
         studenId: submission.user,
+        grade: null,
         timestamp: new Date().toISOString(),
         file: submission.file
     })
@@ -248,7 +252,7 @@ async function fetchAssignmentSubmissions(id) {
         const submissionDetail = await getSubmissionById(submissionId);
         if (submissionDetail) {
             const {_id, file, ...rest} = submissionDetail
-            const url = `/submissions/media/submissions/${path.basename(file.path)}`
+            const url = `/media/submissions/${path.basename(file.path)}`
             results.push({
                 ...rest,
                 file: url

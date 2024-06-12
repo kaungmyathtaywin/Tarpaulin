@@ -6,12 +6,12 @@ const { Router } = require('express')
 const {
     validateUserBody,
     insertNewUser, 
-    getUserbyId,
-    logUserIn,
-    getUserbyEmail
+    getUserById,
+    getUserByEmail,
 } = require('../models/user')
 const { 
-    generateAuthToken, 
+    generateAuthToken,
+    logUserIn,
     requireAuthentication, 
     authorizeAdminAccess 
 } = require('../lib/auth')
@@ -54,7 +54,7 @@ router.post('/login',
     logUserIn,
     async function (req, res, next) {
         try {
-            const userId = await getUserbyEmail(req.body.email)
+            const userId = await getUserByEmail(req.body.email)
             const token = generateAuthToken(userId)
 
             res.status(200).send({
@@ -78,8 +78,7 @@ router.get('/:userId',
         }
 
         try {
-            const user = await getUserbyId(req.params.userId)
-            // TODO: Join student and instructor roles with courses
+            const user = await getUserById(req.params.userId)
             if (user) {
                 res.status(200).send(user)
             } else {
@@ -89,6 +88,13 @@ router.get('/:userId',
             next(error)
         }
 })
+
+
+/**
+ * =============================================================================
+ * Helper Functions
+ * =============================================================================
+ */
 
 /**
  * Helper function to send a reponse for user creation.

@@ -7,7 +7,6 @@ const { getDb } = require('../lib/mongo')
 
 const bcrypt = require('bcryptjs')
 const joi = require('joi')
-const { extractValidFields } = require('../lib/validation')
 
 
 /**
@@ -23,7 +22,8 @@ const UserSchema = joi.object({
     name: joi.string(),
     email: joi.string(),
     password: joi.string(),
-    role: joi.string()
+    role: joi.string(),
+    courses: joi.array().items(joi.string().length(24).hex())
 })
 
 /**
@@ -38,30 +38,6 @@ exports.validateUserBody = function (req, res, next) {
     } else {
         next();
     }
-}
-
-
-/**
- * =============================================================================
- * User Authentication Protocols
- * =============================================================================
- */
-
-/*
- * Middleware to authenticate user agaist its credentials
- */
-exports.logUserIn = async function (req, res, next) {
-    const db = getDb()
-    const collection = db.collection('users')
-    const result = await collection.find({ email: req.body.email }).toArray()
-    const user = result.length > 0 ? result[0] : null
-
-    if (!user && await bcrypt.compare(req.body.password, user.password)) {
-        res.status(401).send({
-            error: "Invalid authentication credentials."
-        })
-    } 
-    next()
 }
 
 
@@ -99,7 +75,7 @@ exports.insertNewUser = async function (user) {
  * 
  * Returns a Promise that resolves to a user object if given a valid id or else returns null.
  */
-exports.getUserbyId = async function (id, includePassword) {
+exports.getUserById = async function (id, includePassword) {
     const db = getDb()
     const collection = db.collection('users')
 
@@ -119,7 +95,7 @@ exports.getUserbyId = async function (id, includePassword) {
  * 
  * Returns a Promise that resolves to ID of fetched user or null if the user doesn't exist.
  */
-exports.getUserbyEmail = async function (email) {
+exports.getUserByEmail = async function (email) {
     const db = getDb()
     const collection = db.collection('users')
     const result = await collection.find({ email: email }).toArray()

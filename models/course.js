@@ -100,7 +100,7 @@ exports.getCoursePage = async (page, subject, number, term) => {
         .sort({ _id: 1 })
         .skip(offset)
         .limit(pageSize)
-        .project({ students: 0 })
+        .project({ students: 0, assignments: 0 })
         .toArray()
 
     return {
@@ -119,11 +119,20 @@ exports.getCoursePage = async (page, subject, number, term) => {
  */
 exports.insertNewCourse = async (course) => {
     const db = getDb()
-    const collection = db.collection('courses')
-    const result = await collection.insertOne({ 
+    const courses = db.collection('courses')
+    const users = db.collection('users')
+    const instructorId = new ObjectId(course.instructorId)
+
+    const result = await courses.insertOne({ 
         ...course,
-        instructorId: new ObjectId(course.instructorId)
+        instructorId: instructorId
     })
+
+    await users.updateOne(
+        { _id: instructorId },
+        { $addToSet: { courses: result.insertedId }}
+    )
+
     return result.insertedId
 }
 
@@ -142,7 +151,10 @@ exports.getCourseById = async (id) => {
 
     const results = await collection
     .find({ _id: new ObjectId(id) })
-    .project({ students: 0 })
+    .project({ 
+        students: 0,
+        assignments: 0
+    })
     .toArray()
     return results[0] 
 }
@@ -182,14 +194,22 @@ exports.updateCourseById = async (id, req) => {
  */
 exports.deleteCourseById = async (id) => {
     const db = getDb()
-    const collection = db.collection('courses')
+    const courses = db.collection('courses')
+    const users = db.collection('users')
+    const courseId = new ObjectId(id)
 
     if (!ObjectId.isValid(id)) {
         return null
     }
 
-    const result = await collection
-    .deleteOne({ _id: new ObjectId(id) })
+    const result = await courses
+    .deleteOne({ _id: courseId })
+
+    // Delete courseId from student/instructor courses
+    await users.updateMany(
+        { courses: courseId },
+        { $pull: { courses: courseId }}
+    )
 
     return result.deletedCount
 }
@@ -208,7 +228,10 @@ exports.fetchStudents = async (courseId) => {
             from: 'users',
             localField: 'students',
             foreignField: '_id',
-            as: 'students'
+            as: 'students',
+            pipeline: [
+                { $project: { courses: 0 } }
+            ]
         }},
         { $project: {
             _id: 0,
@@ -241,17 +264,11 @@ exports.updateEnrollment = async (studentsToAdd, studentsToRemove, courseId) => 
     }
 
     if (addStudentIds.length > 0) {
-        await courses.updateOne(
-            { _id: new ObjectId(courseId) },
-            { $addToSet: { students: { $each: addStudentIds } } }
-        )
+        updateEnrollmentHelper(courseId, addStudentIds, true)
     }
 
     if (removeStudentIds.length > 0) {
-        await courses.updateOne(
-            { _id: new ObjectId(courseId) },
-            { $pullAll: { students: removeStudentIds } }
-        );
+        updateEnrollmentHelper(courseId, removeStudentIds, false)
     }
 
     return "Update Successful"
@@ -313,4 +330,43 @@ exports.createCsv = async (courseId) => {
     const fileName = path.basename(filePath)
     const url = `/courses/roster/${fileName}`
     return url
+}
+
+/* =============================================================================
+ * Helper functions
+ * =============================================================================
+ */
+
+/**
+ * Helper function to update student enrollments in usersDb and coursesDb
+ */
+async function updateEnrollmentHelper(courseId, studentIds, add) {
+    const db = getDb()
+    const courses = db.collection('courses')
+    const users = db.collection('users')
+    const updateOperation = {}
+
+    if (add) {
+        updateOperation.bulk = { $addToSet: { students: { $each: studentIds } } }
+        updateOperation.single = { $addToSet: { courses: new ObjectId(courseId) } }
+    } else {
+        updateOperation.bulk = { $pullAll: { students: studentIds } }
+        updateOperation.single =  { $pull: { courses: new ObjectId(courseId) }}
+    }
+
+    try {
+        await courses.updateOne(
+            { _id: new ObjectId(courseId) },
+            updateOperation.bulk
+        )
+        
+        const updates = studentIds.map(id => users.updateOne(
+            { _id: id },
+            updateOperation.single
+        ))
+
+        await Promise.all(updates);
+    } catch (error) {
+        return error
+    }
 }

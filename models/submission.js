@@ -50,6 +50,7 @@ exports.patchSubmissionById = async (id, req) => {
     }
 
     const updateData = { ...req.body }
+    console.log("Update:", updateData)
 
     const result = await collection.findOneAndUpdate(
         { _id: new ObjectId(id) },

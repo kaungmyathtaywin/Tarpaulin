@@ -11,11 +11,11 @@ const { requireAuthentication, authorizeAssignmentAccess } = require('../lib/aut
  */
 router.patch('/:submissionId',
     requireAuthentication,
-    authorizeAssignmentAccess,
     validateSubmissionFields,
+    authorizeAssignmentAccess,
     async (req, res, next) => {
         try {
-            await patchSubmissionById(req.body.submissionId, req)
+            await patchSubmissionById(req.params.submissionId, req)
             
             res.status(201).send()
         } catch (error) {
