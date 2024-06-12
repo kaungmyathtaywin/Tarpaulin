@@ -4,8 +4,10 @@
 
 const { ObjectId } = require("mongodb")
 const { getDb } = require("../lib/mongo")
-
 const joi = require("joi");
+const {getChannel, queueName} = require('../lib/rabbitmq');
+const path = require('path');
+const { createCsvFile, getLatestCsvFilePath } = require("./csvconsumer");
 
 
 /**
@@ -299,7 +301,38 @@ exports.fetchAssignments = async (courseId) => {
 }
 
 /**
- * =============================================================================
+ * Creates a CSV file by executing code in the background.
+ * 
+ * Returns a url that allows user to download the csv file of the roster of the class. 
+ */
+exports.createCsv = async (courseId) => {
+    const db = getDb()
+    const collection = db.collection('courses')
+    const pipeline = [
+        { $match: { _id: new ObjectId(courseId) }},
+        { $lookup: {
+            from: 'users',
+            localField: 'students',
+            foreignField: '_id',
+            as: 'students'
+        }},
+        { $project: {
+            _id: 0,
+            students: 1
+        }}
+    ]
+    const channel = getChannel()
+    const results = await collection.aggregate(pipeline).toArray()
+    channel.sendToQueue(queueName, Buffer.from(JSON.stringify(results[0])))
+    
+    await createCsvFile()
+    const filePath = getLatestCsvFilePath()
+    const fileName = path.basename(filePath)
+    const url = `/courses/roster/${fileName}`
+    return url
+}
+
+/* =============================================================================
  * Helper functions
  * =============================================================================
  */

@@ -19,8 +19,12 @@ const {
     deleteCourseById, 
     updateEnrollment, 
     fetchStudents,
-    fetchAssignments
+    fetchAssignments,
+    createCsv
 } = require('../models/course')
+
+const path = require('path')
+const express = require('express')
 
 const router = Router()
 
@@ -153,10 +157,26 @@ router.post('/:courseId/students',
 })
 
 /**
- * GET /courses/{courseId}/roster -
+ * GET /roster - url to download the roster in CSV file format
  */
-router.get('/:courseId/roster', async (req, res, next) => {
-    // TODO:
+
+router.use('/roster', express.static(path.join(__dirname, '../media/rosters')));
+
+/**
+ * GET /courses/{courseId}/roster - Route to get the course roster in CSV file format
+ */
+router.get('/:courseId/roster', 
+    requireAuthentication,
+    validateCourseId,
+    authorizeCourseRelatedAccess,
+    async (req, res, next) => {
+        try {
+            const downloadUrl = await createCsv(req.params.courseId);
+            console.log(" == Path:", path.join(__dirname, '../csv_files'))
+            res.status(200).send({url: downloadUrl})
+        } catch (error) {
+            next(error)
+        }
 })
 
 /**

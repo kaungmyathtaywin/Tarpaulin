@@ -117,5 +117,5 @@ exports.bulkInsertNewUsers = async (users) => {
     const db = getDb()
     const collection = db.collection('users')
     const result = await collection.insertMany(users)
-    return result.insertedId
+    return result.insertedIds
 }

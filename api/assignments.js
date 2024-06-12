@@ -7,14 +7,18 @@ const { validateCourseId, validateAssignmentId } = require('../lib/validation')
 const { 
     requireAuthentication, 
     authorizeCourseRelatedAccess, 
-    authorizeAssignmentAccess 
+    authorizeAssignmentAccess,
+    authorizeSubmissionAccess
 } = require('../lib/auth')
 const { 
     validateAssignmentBody, 
     insertNewAssignment, 
     getAssignmentById, 
     updateAssignmentById, 
-    deleteAssignmentById 
+    deleteAssignmentById, 
+    insertNewSubmission,
+    upload,
+    fetchAssignmentSubmissions
 } = require('../models/assignment')
 
 const router = Router()
@@ -87,17 +91,40 @@ router.delete('/:assignmentId',
 })
 
 /**
- * GET /assignments/{assignmentId}/submissions -
+ * GET /assignments/{assignmentId}/submissions - Route to get all the submissions of the specified assignment 
  */
-router.get('/:assignmentId/submissions', async (req, res, next) => {
-    // TODO:
+router.get('/:assignmentId/submissions', 
+    requireAuthentication,
+    validateAssignmentId,
+    authorizeAssignmentAccess,
+    async (req, res, next) => {
+    try {
+        const result = await fetchAssignmentSubmissions(req.params.assignmentId, req.query.page)
+        
+        res.status(200).send(result)
+    } catch (error) {
+        next(error)
+    }
+
 })
 
 /**
- * POST /assignments/{assignmentId}/submissions -
+ * POST /assignments/{assignmentId}/submissions - Route to post a new submission by an authorized user
  */
-router.post('/:assignmentId/submissions', async (req, res, next) => {
-    // TODO:
+router.post('/:assignmentId/submissions', 
+    requireAuthentication,
+    validateAssignmentId,
+    authorizeSubmissionAccess,
+    upload.single("file"),
+    async (req, res, next) => {
+    try {
+
+        const id = await insertNewSubmission(req.params.assignmentId, req)
+        
+        res.status(200).send(id)
+    } catch (error) {
+        next(error)
+    }
 })
 
 module.exports = router
