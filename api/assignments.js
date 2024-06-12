@@ -99,7 +99,7 @@ router.get('/:assignmentId/submissions',
     authorizeAssignmentAccess,
     async (req, res, next) => {
     try {
-        const result = await fetchAssignmentSubmissions(req.params.assignmentId)
+        const result = await fetchAssignmentSubmissions(req.params.assignmentId, req.query.page)
         
         res.status(200).send(result)
     } catch (error) {
@@ -118,6 +118,7 @@ router.post('/:assignmentId/submissions',
     upload.single("file"),
     async (req, res, next) => {
     try {
+
         const id = await insertNewSubmission(req.params.assignmentId, req)
         
         res.status(200).send(id)

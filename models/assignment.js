@@ -243,7 +243,7 @@ exports.getSubmissionById = getSubmissionById
  * 
  * Returns a Promise that resolves to a all the submissions of a given assignment. 
  */
-async function fetchAssignmentSubmissions(id) {
+async function fetchAssignmentSubmissions(id, page = 1) {
     const assignment = await getAssignmentById(id, true)
     let results = []
     const submissionIds = assignment.submissions
@@ -259,8 +259,15 @@ async function fetchAssignmentSubmissions(id) {
             });
         }
     }
+    
+    const count = results.length
+    const pageSize = 5
+    const lastPage = Math.ceil(count / pageSize)
+    page = page > lastPage ? lastPage : page
+    page = page < 1 ? 1 : page
+    const offset = (page - 1) * pageSize
+    const currPage = results.slice(offset, offset+pageSize)
 
-
-    return {submissions: results}
+    return {submissions: currPage}
 }
 exports.fetchAssignmentSubmissions = fetchAssignmentSubmissions
