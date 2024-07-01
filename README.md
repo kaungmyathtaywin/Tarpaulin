@@ -2,11 +2,9 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 # Tarpaulin
----
 Tarpaulin is a Canvas-like course management application implemented with a complete RESTful API for creating, deleting, editing courses and submissions users (students and instructors).
 
 ## Table of Contents
----
 * [Features](#features)
 * [Built With](#built-with)
 * [Getting Started](#getting-started)
@@ -15,7 +13,6 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * [License](#license)
 
 ## Features
----
 * User authentication and authorization (Admin, Instructor, Student roles)
 * CRUD operations for courses, assignments, and submissions
 * File upload and download for assignment submissions
@@ -25,7 +22,6 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * Docker containerization for all services
 
 ## Built With
----
 * [![Node.js][Node.js]][Node-url]
 * [![Express.js][Express.js]][Express-url]
 * [![MongoDb][MongoDB]][MongoDB-url]
@@ -36,7 +32,6 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * [![AWS ECS][AWS ECS]][AWS-url]
 
 ## Getting Started
----
 
 ### Prerequisites
 * Node.js (>= 20.x)
@@ -66,7 +61,6 @@ MONGO_PASSWORD=hunter2
 ```
 
 ## Running the Application
----
 ```sh
 docker-compose up -d --build
 ```
@@ -87,11 +81,9 @@ The application should be running at your `localhost` with port `8000`.
 
 
 ## API Endpoints
----
 All the endpoints for this application can be accessed through `openapi.yaml` file. You can copy and paste the cotents from `openapi.yaml' into [swagger.io](https://editor.swagger.io/)
 
 ## License
----
 Distributed under the MIT license. See LICENSE.txt for more information
 
 
