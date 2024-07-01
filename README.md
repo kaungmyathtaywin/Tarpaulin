@@ -2,7 +2,13 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 # Tarpaulin
-Tarpaulin is a Canvas-like course management application implemented with a complete RESTful API for creating, deleting, editing courses and submissions users (students and instructors).
+
+<!-- Project Overview  -->
+
+## Project Overview
+Tarpaulin is a Canvas-like course management backend application implemented with a complete RESTful API for creating, deleting, editing courses and submissions users (students and instructors).
+
+<!-- Table of Contents  -->
 
 ## Table of Contents
 * [Features](#features)
@@ -11,6 +17,8 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * [Running the Application](#running-the-application)
 * [API Endpoints](#api-endpoints)
 * [License](#license)
+
+<!-- Features -->
 
 ## Features
 * User authentication and authorization (Admin, Instructor, Student roles)
@@ -21,6 +29,8 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * Rate limiting to prevent DDOS attacks
 * Docker containerization for all services
 
+<!-- Built With -->
+
 ## Built With
 * [![Node.js][Node.js]][Node-url]
 * [![Express.js][Express.js]][Express-url]
@@ -30,6 +40,8 @@ Tarpaulin is a Canvas-like course management application implemented with a comp
 * [![JWT][JWT]][JWT-url]
 * [![Docker][Docker]][Docker-url]
 * [![AWS ECS][AWS ECS]][AWS-url]
+
+<!-- Getting Started -->
 
 ## Getting Started
 
@@ -79,12 +91,15 @@ npm start
 
 The application should be running at your `localhost` with port `8000`.
 
+<!-- API Endpoints -->
 
 ## API Endpoints
 All the endpoints for this application can be accessed through `openapi.yaml` file. You can copy and paste the contents from `openapi.yaml` into [swagger.io](https://editor.swagger.io/).
 
+<!-- License -->
+
 ## License
-Distributed under the MIT license. See LICENSE.txt for more information.
+This project is licensed under the MIT license. See LICENSE.txt for more information.
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
