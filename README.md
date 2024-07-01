@@ -81,7 +81,7 @@ The application should be running at your `localhost` with port `8000`.
 
 
 ## API Endpoints
-All the endpoints for this application can be accessed through `openapi.yaml` file. You can copy and paste the cotents from `openapi.yaml' into [swagger.io](https://editor.swagger.io/)
+All the endpoints for this application can be accessed through `openapi.yaml` file. You can copy and paste the contents from `openapi.yaml` into [swagger.io](https://editor.swagger.io/)
 
 ## License
 Distributed under the MIT license. See LICENSE.txt for more information
